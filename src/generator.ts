@@ -54,6 +54,8 @@ export async function generateLatestJson(
     // Get all platform keys for this artifact (basic and extended)
     const keys = getPlatformKeys(artifact);
     for (const key of keys) {
+      const isBasicKey = key === `${artifact.os}-${artifact.arch}`;
+      const isWindowsBasic = artifact.os === "windows" && isBasicKey;
       if (
         !allowOverwritePlatforms &&
         Object.prototype.hasOwnProperty.call(platforms, key)
@@ -66,6 +68,14 @@ export async function generateLatestJson(
           key === "darwin-aarch64-app" ||
           key === "darwin-x86_64-app";
         if (isUniversalDarwin && isUniversalKey) {
+          continue;
+        }
+        if (isWindowsBasic) {
+          if (artifact.bundle === "msi") {
+            platforms[key] = platformInfo;
+            continue;
+          }
+          // Prefer MSI for os-arch key; keep existing entry for NSIS.
           continue;
         }
         throw new Error(
