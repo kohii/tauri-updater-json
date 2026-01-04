@@ -25,7 +25,7 @@ node dist/index.js \
 |--------|----------|-------------|
 | `--tauri-project` | Yes | Path to Tauri project directory |
 | `--output-dir` | Yes | Output directory for `latest.json` and artifacts |
-| `--base-url` | Yes | Base URL for artifact downloads |
+| `--base-url` | Yes | Base URL for artifact downloads (supports `{version}` placeholder) |
 | `--notes` | No | Release notes |
 
 ### Example
@@ -34,12 +34,13 @@ node dist/index.js \
 node dist/index.js \
   --tauri-project ./my-tauri-app \
   --output-dir ./releases \
-  --base-url https://example.com/releases/
+  --base-url https://example.com/releases/{version}/
 ```
 
 ## Features
 
-- Reads version from `tauri.conf.json`
+- Reads version from `tauri.conf.json` (supports `version` pointing to a `package.json` path)
+- Supports `{version}` placeholder in `--base-url`
 - Auto-detects build artifacts from `target/release/bundle/`
 - Reads signature content from `.sig` files
 - Appends to existing `latest.json` if present

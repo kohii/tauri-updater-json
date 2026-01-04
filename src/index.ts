@@ -20,7 +20,7 @@ program
   )
   .requiredOption(
     "--base-url <url>",
-    "Base URL for artifact downloads"
+    "Base URL for artifact downloads (supports {version} placeholder)"
   )
   .option("--notes <string>", "Release notes")
   .action(async (opts) => {

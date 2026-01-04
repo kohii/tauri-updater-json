@@ -16,8 +16,19 @@ async function loadExistingLatestJson(
   }
 }
 
-function buildUrl(baseUrl: string, fileName: string): string {
-  const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+const VERSION_PLACEHOLDERS = ["{version}", "${version}", "{{version}}"];
+
+function applyVersionPlaceholder(baseUrl: string, version: string): string {
+  let resolved = baseUrl;
+  for (const placeholder of VERSION_PLACEHOLDERS) {
+    resolved = resolved.replaceAll(placeholder, version);
+  }
+  return resolved;
+}
+
+function buildUrl(baseUrl: string, version: string, fileName: string): string {
+  const resolvedBase = applyVersionPlaceholder(baseUrl, version);
+  const base = resolvedBase.endsWith("/") ? resolvedBase : `${resolvedBase}/`;
   return `${base}${fileName}`;
 }
 
@@ -35,7 +46,7 @@ export async function generateLatestJson(
   for (const artifact of artifacts) {
     const signature = await readSignature(artifact.signaturePath);
     const platformInfo: PlatformInfo = {
-      url: buildUrl(baseUrl, artifact.fileName),
+      url: buildUrl(baseUrl, version, artifact.fileName),
       signature: signature.trim(),
     };
 
