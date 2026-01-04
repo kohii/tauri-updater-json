@@ -37,7 +37,8 @@ export async function generateLatestJson(
   version: string,
   baseUrl: string,
   outputDir: string,
-  notes?: string
+  notes?: string,
+  allowOverwritePlatforms?: boolean
 ): Promise<LatestJson> {
   const existing = await loadExistingLatestJson(outputDir);
 
@@ -53,7 +54,30 @@ export async function generateLatestJson(
     // Get all platform keys for this artifact (basic and extended)
     const keys = getPlatformKeys(artifact);
     for (const key of keys) {
-      platforms[key] = platformInfo;
+      if (
+        !allowOverwritePlatforms &&
+        Object.prototype.hasOwnProperty.call(platforms, key)
+      ) {
+        const isUniversalDarwin =
+          artifact.os === "darwin" && artifact.arch === "universal";
+        const isUniversalKey =
+          key === "darwin-aarch64" ||
+          key === "darwin-x86_64" ||
+          key === "darwin-aarch64-app" ||
+          key === "darwin-x86_64-app";
+        if (isUniversalDarwin && isUniversalKey) {
+          continue;
+        }
+        throw new Error(
+          `Platform entry already exists for key "${key}" (artifact: ${artifact.fileName})`
+        );
+      }
+      if (
+        allowOverwritePlatforms ||
+        !Object.prototype.hasOwnProperty.call(platforms, key)
+      ) {
+        platforms[key] = platformInfo;
+      }
     }
   }
 

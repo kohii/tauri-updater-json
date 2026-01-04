@@ -30,6 +30,7 @@ export interface CliOptions {
   outputDir: string;
   baseUrl: string;
   notes?: string;
+  allowOverwritePlatforms?: boolean;
 }
 
 export interface Artifact {

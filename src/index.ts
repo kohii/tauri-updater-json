@@ -27,12 +27,17 @@ program
     "Base URL for artifact downloads (supports {version} placeholder)"
   )
   .option("--notes <string>", "Release notes")
+  .option(
+    "--allow-overwrite-platforms",
+    "Allow overwriting existing platform entries in latest.json"
+  )
   .action(async (opts) => {
     const options: CliOptions = {
       tauriProject: resolve(opts.tauriProject),
       outputDir: resolve(opts.outputDir),
       baseUrl: opts.baseUrl,
       notes: opts.notes,
+      allowOverwritePlatforms: opts.allowOverwritePlatforms,
     };
 
     try {
@@ -78,7 +83,8 @@ program
         version,
         options.baseUrl,
         options.outputDir,
-        options.notes
+        options.notes,
+        options.allowOverwritePlatforms
       );
 
       await writeLatestJson(latestJson, options.outputDir);

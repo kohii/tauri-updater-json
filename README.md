@@ -16,7 +16,8 @@ node dist/index.js \
   --tauri-project <path> \
   --output-dir <path> \
   --base-url <url> \
-  [--notes <string>]
+  [--notes <string>] \
+  [--allow-overwrite-platforms]
 ```
 
 ### Options
@@ -27,6 +28,7 @@ node dist/index.js \
 | `--output-dir` | Yes | Output directory for `latest.json` and artifacts |
 | `--base-url` | Yes | Base URL for artifact downloads (supports `{version}` placeholder) |
 | `--notes` | No | Release notes |
+| `--allow-overwrite-platforms` | No | Allow overwriting existing platform entries in `latest.json` |
 
 ### Example
 
@@ -41,12 +43,12 @@ node dist/index.js \
 
 - Reads version from `tauri.conf.json` (supports `version` pointing to a `package.json` path)
 - Supports `{version}` placeholder in `--base-url`
-- Auto-detects build artifacts from `target/release/bundle/`
+- Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`
 - Reads signature content from `.sig` files
-- Appends to existing `latest.json` if present
+- Appends to existing `latest.json` if present (errors on duplicates by default)
 - Copies distribution files to output directory
 - Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys
-- Supports macOS universal builds (registers for both `x86_64` and `aarch64`)
+- Supports macOS universal builds (registers for both `x86_64` and `aarch64`, without overwriting native builds)
 
 ## Supported Platforms
 
