@@ -1,0 +1,29 @@
+{
+  "name": "tauri-updater-json",
+  "version": "0.1.0",
+  "description": "CLI tool to generate latest.json for Tauri v2 updater",
+  "type": "module",
+  "bin": {
+    "tauri-updater-json": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "tauri",
+    "updater",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  }
+}
