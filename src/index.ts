@@ -3,7 +3,11 @@
 import { program } from "commander";
 import { resolve } from "node:path";
 import { readTauriConfig } from "./config.js";
-import { findArtifacts, copyArtifactToOutput } from "./artifacts.js";
+import {
+  findArtifacts,
+  copyArtifactToOutput,
+  getSearchDirectories,
+} from "./artifacts.js";
 import { generateLatestJson, writeLatestJson } from "./generator.js";
 import type { CliOptions } from "./types.js";
 
@@ -39,6 +43,13 @@ program
 
       // Find build artifacts
       console.log("Searching for build artifacts...");
+      const searchDirectories = await getSearchDirectories(
+        options.tauriProject
+      );
+      console.log("Search directories:");
+      for (const dir of searchDirectories) {
+        console.log(`  - ${dir}`);
+      }
       const artifacts = await findArtifacts(options.tauriProject);
 
       if (artifacts.length === 0) {

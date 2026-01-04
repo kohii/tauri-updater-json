@@ -9,7 +9,7 @@ interface BundleConfig {
   // Pattern to match the bundle file (without .sig)
   pattern: RegExp;
   // Function to extract architecture from filename
-  extractArch: (fileName: string) => Arch | null;
+  extractArch: (fileName: string, filePath: string) => Arch | null;
 }
 
 // Normalize architecture to standard format
@@ -80,27 +80,26 @@ const BUNDLE_CONFIGS: BundleConfig[] = [
     bundle: "app",
     dir: "macos",
     pattern: /\.app\.tar\.gz$/,
-    extractArch: (fileName) => {
-      // Check for universal build
-      if (fileName.includes("universal")) {
+    extractArch: (fileName, filePath) => {
+      // Prefer target triple from path (tauri-action behavior)
+      if (filePath.includes("universal-apple-darwin") || fileName.includes("universal")) {
         return "universal";
       }
-      // Check for arch in filename
+      if (filePath.includes("aarch64-apple-darwin")) {
+        return "aarch64";
+      }
+      if (filePath.includes("x86_64-apple-darwin")) {
+        return "x86_64";
+      }
+      // Fallback to filename markers
       if (fileName.includes("aarch64") || fileName.includes("arm64")) {
         return "aarch64";
       }
       if (fileName.includes("x86_64") || fileName.includes("x64")) {
         return "x86_64";
       }
-      // Default: try to detect from filename pattern like AppName_aarch64.app.tar.gz
-      const match = fileName.match(/_([^_]+)\.app\.tar\.gz$/);
-      if (match) {
-        const arch = normalizeArch(match[1]);
-        if (arch) return arch;
-      }
-      // If no arch detected, assume it could be universal or needs manual check
-      // For now, check if there's explicit arch marker
-      return null;
+      // Final fallback: use current runtime arch (tauri-action parseAsset fallback)
+      return process.arch === "arm64" ? "aarch64" : "x86_64";
     },
   },
   // Windows NSIS
@@ -142,49 +141,79 @@ async function findFilesInDir(
 }
 
 export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
-  const bundleDir = join(
-    projectPath,
-    "src-tauri",
-    "target",
-    "release",
-    "bundle"
-  );
+  const bundleRoots = await getBundleRoots(projectPath);
   const artifacts: Artifact[] = [];
+  const seen = new Set<string>();
 
-  for (const config of BUNDLE_CONFIGS) {
-    const dirPath = join(bundleDir, config.dir);
-    const files = await findFilesInDir(dirPath, config.pattern);
+  for (const bundleDir of bundleRoots) {
+    for (const config of BUNDLE_CONFIGS) {
+      const dirPath = join(bundleDir, config.dir);
+      const files = await findFilesInDir(dirPath, config.pattern);
 
-    for (const filePath of files) {
-      const sigPath = `${filePath}.sig`;
-      const fileName = basename(filePath);
+      for (const filePath of files) {
+        if (seen.has(filePath)) continue;
+        seen.add(filePath);
+        const sigPath = `${filePath}.sig`;
+        const fileName = basename(filePath);
 
-      // Check if signature file exists
-      try {
-        await readFile(sigPath);
-      } catch {
-        console.warn(`Signature file not found for ${fileName}, skipping`);
-        continue;
+        // Check if signature file exists
+        try {
+          await readFile(sigPath);
+        } catch {
+          console.warn(`Signature file not found for ${fileName}, skipping`);
+          continue;
+        }
+
+        const arch = config.extractArch(fileName, filePath);
+        if (!arch) {
+          console.warn(
+            `Could not detect architecture for ${fileName}, skipping`
+          );
+          continue;
+        }
+
+        artifacts.push({
+          os: config.os,
+          arch,
+          bundle: config.bundle,
+          bundlePath: filePath,
+          signaturePath: sigPath,
+          fileName,
+        });
       }
-
-      const arch = config.extractArch(fileName);
-      if (!arch) {
-        console.warn(`Could not detect architecture for ${fileName}, skipping`);
-        continue;
-      }
-
-      artifacts.push({
-        os: config.os,
-        arch,
-        bundle: config.bundle,
-        bundlePath: filePath,
-        signaturePath: sigPath,
-        fileName,
-      });
     }
   }
 
   return artifacts;
+}
+
+export async function getSearchDirectories(
+  projectPath: string
+): Promise<string[]> {
+  const roots = await getBundleRoots(projectPath);
+  return roots.flatMap((bundleDir) =>
+    BUNDLE_CONFIGS.map((config) => join(bundleDir, config.dir))
+  );
+}
+
+async function getBundleRoots(projectPath: string): Promise<string[]> {
+  const targetDir = join(projectPath, "src-tauri", "target");
+  const roots = new Set<string>([
+    join(targetDir, "release", "bundle"),
+  ]);
+
+  try {
+    const entries = await readdir(targetDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === "release" || entry.name === "debug") continue;
+      roots.add(join(targetDir, entry.name, "release", "bundle"));
+    }
+  } catch {
+    // ignore missing target dir
+  }
+
+  return Array.from(roots);
 }
 
 export async function readSignature(signaturePath: string): Promise<string> {
