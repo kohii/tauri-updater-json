@@ -10,7 +10,7 @@ export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "universal";
 export type BundleType = "appimage" | "deb" | "rpm" | "app" | "nsis" | "msi";
 
 export const PlatformInfoSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   signature: z.string(),
 });
 

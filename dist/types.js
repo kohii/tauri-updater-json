@@ -1,6 +1,6 @@
 import { z } from "zod";
 export const PlatformInfoSchema = z.object({
-    url: z.string().url(),
+    url: z.url(),
     signature: z.string(),
 });
 export const LatestJsonSchema = z.object({
