@@ -38,7 +38,8 @@ export interface Artifact {
   arch: Arch;
   bundle: BundleType;
   bundlePath: string;
-  signaturePath: string;
+  // Content of the `.sig` file
+  signature: string;
   fileName: string;
 }
 

@@ -55,7 +55,7 @@ program
       for (const dir of searchDirectories) {
         console.log(`  - ${dir}`);
       }
-      const artifacts = await findArtifacts(options.tauriProject);
+      const artifacts = await findArtifacts(options.tauriProject, version);
 
       if (artifacts.length === 0) {
         console.error(
@@ -69,13 +69,6 @@ program
         console.log(`  - ${artifact.os}-${artifact.arch} (${artifact.bundle}): ${artifact.fileName}`);
       }
 
-      // Copy artifacts to output directory
-      console.log("\nCopying artifacts to output directory...");
-      for (const artifact of artifacts) {
-        await copyArtifactToOutput(artifact, options.outputDir);
-        console.log(`  Copied: ${artifact.fileName}`);
-      }
-
       // Generate latest.json
       console.log("\nGenerating latest.json...");
       const latestJson = await generateLatestJson(
@@ -86,6 +79,13 @@ program
         options.notes,
         options.allowOverwritePlatforms
       );
+
+      // Copy only once latest.json is known to be valid
+      console.log("\nCopying artifacts to output directory...");
+      for (const artifact of artifacts) {
+        await copyArtifactToOutput(artifact, options.outputDir);
+        console.log(`  Copied: ${artifact.fileName}`);
+      }
 
       await writeLatestJson(latestJson, options.outputDir);
       console.log("Generated latest.json");

@@ -29,7 +29,7 @@ export interface Artifact {
     arch: Arch;
     bundle: BundleType;
     bundlePath: string;
-    signaturePath: string;
+    signature: string;
     fileName: string;
 }
 export declare const TauriConfigSchema: z.ZodObject<{

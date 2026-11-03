@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readdir, readFile, copyFile, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { promisify } from "node:util";
+import { isSignedFor, signedVersion } from "./signature.js";
 import type { Artifact, Arch, OS, BundleType } from "./types.js";
 
 interface BundleConfig {
@@ -142,7 +143,11 @@ async function findFilesInDir(
   }
 }
 
-export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
+// Finds the signed bundles of the release `version`.
+export async function findArtifacts(
+  projectPath: string,
+  version: string
+): Promise<Artifact[]> {
   const bundleRoots = await getBundleRoots(projectPath);
   const artifacts: Artifact[] = [];
   const seen = new Set<string>();
@@ -155,14 +160,23 @@ export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
       for (const filePath of files) {
         if (seen.has(filePath)) continue;
         seen.add(filePath);
-        const sigPath = `${filePath}.sig`;
         const fileName = basename(filePath);
 
-        // Check if signature file exists
+        let signature: string;
         try {
-          await readFile(sigPath);
+          signature = (await readFile(`${filePath}.sig`, "utf-8")).trim();
         } catch {
           console.warn(`Signature file not found for ${fileName}, skipping`);
+          continue;
+        }
+
+        // A bundle left over from an earlier build (e.g. under another
+        // target triple) is signed for another version, and the updater
+        // would reject it.
+        if (!isSignedFor(signature, version)) {
+          console.warn(
+            `${fileName} is signed for version ${signedVersion(signature)}, not ${version}, skipping`
+          );
           continue;
         }
 
@@ -179,7 +193,7 @@ export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
           arch,
           bundle: config.bundle,
           bundlePath: filePath,
-          signaturePath: sigPath,
+          signature,
           fileName,
         });
       }
@@ -234,10 +248,6 @@ async function getBundleRoots(projectPath: string): Promise<string[]> {
   }
 
   return Array.from(roots);
-}
-
-export async function readSignature(signaturePath: string): Promise<string> {
-  return readFile(signaturePath, "utf-8");
 }
 
 export async function copyArtifactToOutput(

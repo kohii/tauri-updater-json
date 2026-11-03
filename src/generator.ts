@@ -2,7 +2,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Artifact, LatestJson, PlatformInfo } from "./types.js";
 import { LatestJsonSchema } from "./types.js";
-import { readSignature, getPlatformKeys } from "./artifacts.js";
+import { getPlatformKeys } from "./artifacts.js";
+import { isSignedFor } from "./signature.js";
 
 async function loadExistingLatestJson(
   outputDir: string
@@ -45,10 +46,9 @@ export async function generateLatestJson(
   const platforms: Record<string, PlatformInfo> = existing?.platforms ?? {};
 
   for (const artifact of artifacts) {
-    const signature = await readSignature(artifact.signaturePath);
     const platformInfo: PlatformInfo = {
       url: buildUrl(baseUrl, version, artifact.fileName),
-      signature: signature.trim(),
+      signature: artifact.signature,
     };
 
     // Get all platform keys for this artifact (basic and extended)
@@ -89,6 +89,16 @@ export async function generateLatestJson(
         platforms[key] = platformInfo;
       }
     }
+  }
+
+  // Entries kept from an existing latest.json may belong to an earlier release.
+  const stale = Object.keys(platforms).filter(
+    (key) => !isSignedFor(platforms[key].signature, version)
+  );
+  if (stale.length > 0) {
+    throw new Error(
+      `Platform entries signed for another version than ${version}: ${stale.join(", ")}. The updater rejects them; rebuild those platforms or remove them from latest.json`
+    );
   }
 
   const latestJson: LatestJson = {

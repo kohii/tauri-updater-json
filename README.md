@@ -9,6 +9,8 @@ pnpm install
 pnpm build
 ```
 
+Run the tests with `pnpm test`.
+
 ## Usage
 
 ```bash
@@ -45,6 +47,7 @@ node dist/index.js \
 - Supports `{version}` placeholder in `--base-url`
 - Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`, in the target directory cargo reports (a Cargo workspace's root `target/`, or `CARGO_TARGET_DIR`)
 - Reads signature content from `.sig` files
+- Checks that every signature was made for the release version: skips bundles signed for another version (e.g. left over from an earlier build), and errors on entries kept from an existing `latest.json` that belong to an earlier release. tauri-plugin-updater 2.14+ rejects an update whose signed version differs from `version`; signatures from Tauri CLI before 2.12 carry no version and are accepted
 - Appends to existing `latest.json` if present (errors on duplicates by default)
 - Copies distribution files to output directory
 - Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys
