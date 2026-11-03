@@ -1,7 +1,7 @@
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,12 +29,16 @@ function signedFor(file: string, version?: string): string {
   return signature(fields.join("\t"));
 }
 
+const roots: string[] = [];
+after(() => Promise.all(roots.map((root) => rm(root, { recursive: true, force: true }))));
+
 // bundle paths are relative to src-tauri/target
 async function makeProject(
   version: string,
   bundles: Record<string, string | null>
 ): Promise<{ project: string; out: string }> {
   const root = await mkdtemp(join(tmpdir(), "tauri-updater-json-"));
+  roots.push(root);
   const project = join(root, "app");
   const srcTauri = join(project, "src-tauri");
   await mkdir(srcTauri, { recursive: true });
@@ -146,6 +150,16 @@ test("skips bundles signed for another version", async () => {
     "linux-x86_64",
     "linux-x86_64-deb",
   ]);
+});
+
+test("explains when every bundle is signed for another version", async () => {
+  // e.g. the app was built before tauri.conf.json got its new version
+  const { project, out } = await makeProject("1.1.0", {
+    "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
+  });
+  const result = await run(project, out);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /No artifacts are signed for version 1.1.0 from tauri.conf.json/);
 });
 
 test("replaces a latest.json of another release", async () => {

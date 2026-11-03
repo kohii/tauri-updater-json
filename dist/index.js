@@ -35,14 +35,17 @@ program
         }
         // A bundle left over from an earlier build (e.g. under another target
         // triple) is signed for another version, and the updater rejects it.
-        const artifacts = (await findArtifacts(options.tauriProject)).filter((artifact) => {
+        const found = await findArtifacts(options.tauriProject);
+        const artifacts = found.filter((artifact) => {
             if (isSignedFor(artifact.signature, version))
                 return true;
             console.warn(`${artifact.fileName} is signed for version ${signedVersion(artifact.signature)}, not ${version}, skipping`);
             return false;
         });
         if (artifacts.length === 0) {
-            console.error("No artifacts found. Make sure you have built the Tauri app with updater artifacts enabled.");
+            console.error(found.length > 0
+                ? `No artifacts are signed for version ${version} from tauri.conf.json. Rebuild the app, or make tauri.conf.json have the version the app was built with.`
+                : "No artifacts found. Make sure you have built the Tauri app with updater artifacts enabled.");
             process.exit(1);
         }
         console.log(`Found ${artifacts.length} artifact(s):`);
