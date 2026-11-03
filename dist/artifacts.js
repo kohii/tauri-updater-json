@@ -2,7 +2,6 @@ import { execFile } from "node:child_process";
 import { readdir, readFile, copyFile, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { promisify } from "node:util";
-import { isSignedFor, signedVersion } from "./signature.js";
 // Normalize architecture to standard format
 function normalizeArch(arch) {
     switch (arch) {
@@ -128,8 +127,7 @@ async function findFilesInDir(dirPath, pattern) {
         return [];
     }
 }
-// Finds the signed bundles of the release `version`.
-export async function findArtifacts(projectPath, version) {
+export async function findArtifacts(projectPath) {
     const bundleRoots = await getBundleRoots(projectPath);
     const artifacts = [];
     const seen = new Set();
@@ -148,13 +146,6 @@ export async function findArtifacts(projectPath, version) {
                 }
                 catch {
                     console.warn(`Signature file not found for ${fileName}, skipping`);
-                    continue;
-                }
-                // A bundle left over from an earlier build (e.g. under another
-                // target triple) is signed for another version, and the updater
-                // would reject it.
-                if (!isSignedFor(signature, version)) {
-                    console.warn(`${fileName} is signed for version ${signedVersion(signature)}, not ${version}, skipping`);
                     continue;
                 }
                 const arch = config.extractArch(fileName, filePath);

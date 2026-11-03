@@ -2,7 +2,6 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { LatestJsonSchema } from "./types.js";
 import { getPlatformKeys } from "./artifacts.js";
-import { isSignedFor } from "./signature.js";
 async function loadExistingLatestJson(outputDir) {
     const latestJsonPath = join(outputDir, "latest.json");
     try {
@@ -27,7 +26,13 @@ function buildUrl(baseUrl, version, fileName) {
     return `${base}${fileName}`;
 }
 export async function generateLatestJson(artifacts, version, baseUrl, outputDir, notes, allowOverwritePlatforms) {
-    const existing = await loadExistingLatestJson(outputDir);
+    // latest.json describes one release. Entries of another release would
+    // point to builds of another version, which the updater rejects.
+    let existing = await loadExistingLatestJson(outputDir);
+    if (existing && existing.version !== version) {
+        console.warn(`Existing latest.json is for version ${existing.version}, replacing it with one for ${version}`);
+        existing = null;
+    }
     const platforms = existing?.platforms ?? {};
     for (const artifact of artifacts) {
         const platformInfo = {
@@ -64,11 +69,6 @@ export async function generateLatestJson(artifacts, version, baseUrl, outputDir,
                 platforms[key] = platformInfo;
             }
         }
-    }
-    // Entries kept from an existing latest.json may belong to an earlier release.
-    const stale = Object.keys(platforms).filter((key) => !isSignedFor(platforms[key].signature, version));
-    if (stale.length > 0) {
-        throw new Error(`Platform entries signed for another version than ${version}: ${stale.join(", ")}. The updater rejects them; rebuild those platforms or remove them from latest.json`);
     }
     const latestJson = {
         version,

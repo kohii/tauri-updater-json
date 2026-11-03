@@ -118,9 +118,13 @@ test("adds to an existing latest.json and refuses duplicate keys", async () => {
     "linux-x86_64-deb",
   ]);
 
-  const again = await run(linux.project, linux.out);
+  const rebuilt = await makeProject("1.0.0", {
+    "release/bundle/deb/Renamed_1.0.0_amd64.deb": signedFor("Renamed_1.0.0_amd64.deb", "1.0.0"),
+  });
+  const again = await run(rebuilt.project, linux.out);
   assert.equal(again.code, 1);
   assert.match(again.stderr, /Platform entry already exists for key "linux-x86_64"/);
+  assert.ok(!(await readdir(linux.out)).includes("Renamed_1.0.0_amd64.deb"), "a rejected run copies nothing");
   assert.equal((await run(linux.project, linux.out, "--allow-overwrite-platforms")).code, 0);
 });
 
@@ -144,7 +148,7 @@ test("skips bundles signed for another version", async () => {
   ]);
 });
 
-test("refuses to keep entries of an earlier release from latest.json", async () => {
+test("replaces a latest.json of another release", async () => {
   const v1 = await makeProject("1.0.0", {
     "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
     "release/bundle/nsis/App_1.0.0_x64-setup.exe": signedFor("App_1.0.0_x64-setup.exe", "1.0.0"),
@@ -152,17 +156,15 @@ test("refuses to keep entries of an earlier release from latest.json", async () 
   const v2 = await makeProject("2.0.0", {
     "release/bundle/deb/App_2.0.0_amd64.deb": signedFor("App_2.0.0_amd64.deb", "2.0.0"),
   });
-  assert.equal((await run(v1.project, v1.out)).code, 0);
-  const before = (await readdir(v1.out)).sort();
+  assert.equal((await run(v1.project, v1.out, "--notes", "v1 notes")).code, 0);
 
-  const result = await run(v2.project, v1.out, "--allow-overwrite-platforms");
-  assert.equal(result.code, 1);
-  assert.match(
-    result.stderr,
-    /Platform entries signed for another version than 2.0.0: windows-x86_64, windows-x86_64-nsis\./
-  );
-  assert.deepEqual((await readdir(v1.out)).sort(), before, "nothing is copied");
-  assert.equal((await readLatest(v1.out)).version, "1.0.0");
+  const result = await run(v2.project, v1.out);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stderr, /Existing latest.json is for version 1.0.0, replacing it with one for 2.0.0/);
+  const latest = await readLatest(v1.out);
+  assert.equal(latest.version, "2.0.0");
+  assert.equal(latest.notes, undefined);
+  assert.deepEqual(Object.keys(latest.platforms).sort(), ["linux-x86_64", "linux-x86_64-deb"]);
 });
 
 test("supports riscv64", async () => {

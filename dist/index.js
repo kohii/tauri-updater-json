@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { readTauriConfig } from "./config.js";
 import { findArtifacts, copyArtifactToOutput, getSearchDirectories, } from "./artifacts.js";
 import { generateLatestJson, writeLatestJson } from "./generator.js";
+import { isSignedFor, signedVersion } from "./signature.js";
 program
     .name("tauri-updater-json")
     .description("Generate latest.json for Tauri v2 updater")
@@ -32,7 +33,14 @@ program
         for (const dir of searchDirectories) {
             console.log(`  - ${dir}`);
         }
-        const artifacts = await findArtifacts(options.tauriProject, version);
+        // A bundle left over from an earlier build (e.g. under another target
+        // triple) is signed for another version, and the updater rejects it.
+        const artifacts = (await findArtifacts(options.tauriProject)).filter((artifact) => {
+            if (isSignedFor(artifact.signature, version))
+                return true;
+            console.warn(`${artifact.fileName} is signed for version ${signedVersion(artifact.signature)}, not ${version}, skipping`);
+            return false;
+        });
         if (artifacts.length === 0) {
             console.error("No artifacts found. Make sure you have built the Tauri app with updater artifacts enabled.");
             process.exit(1);

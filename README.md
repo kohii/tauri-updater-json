@@ -47,8 +47,8 @@ node dist/index.js \
 - Supports `{version}` placeholder in `--base-url`
 - Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`, in the target directory cargo reports (a Cargo workspace's root `target/`, or `CARGO_TARGET_DIR`)
 - Reads signature content from `.sig` files
-- Checks that every signature was made for the release version: skips bundles signed for another version (e.g. left over from an earlier build), and errors on entries kept from an existing `latest.json` that belong to an earlier release. tauri-plugin-updater 2.14+ rejects an update whose signed version differs from `version`; signatures from Tauri CLI before 2.12 carry no version and are accepted
-- Appends to existing `latest.json` if present (errors on duplicates by default)
+- Skips bundles signed for a version other than the one in `tauri.conf.json`, such as leftovers from an earlier build (tauri-plugin-updater 2.14+ rejects them)
+- Appends to an existing `latest.json` of the same version (errors on duplicates by default), and replaces one of another version
 - Copies distribution files to output directory
 - Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys
 - Supports macOS universal builds (registers for both `x86_64` and `aarch64`, without overwriting native builds)

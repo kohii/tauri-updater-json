@@ -9,6 +9,7 @@ import {
   getSearchDirectories,
 } from "./artifacts.js";
 import { generateLatestJson, writeLatestJson } from "./generator.js";
+import { isSignedFor, signedVersion } from "./signature.js";
 import type { CliOptions } from "./types.js";
 
 program
@@ -55,7 +56,17 @@ program
       for (const dir of searchDirectories) {
         console.log(`  - ${dir}`);
       }
-      const artifacts = await findArtifacts(options.tauriProject, version);
+      // A bundle left over from an earlier build (e.g. under another target
+      // triple) is signed for another version, and the updater rejects it.
+      const artifacts = (await findArtifacts(options.tauriProject)).filter(
+        (artifact) => {
+          if (isSignedFor(artifact.signature, version)) return true;
+          console.warn(
+            `${artifact.fileName} is signed for version ${signedVersion(artifact.signature)}, not ${version}, skipping`
+          );
+          return false;
+        }
+      );
 
       if (artifacts.length === 0) {
         console.error(
