@@ -23,6 +23,8 @@ function normalizeArch(arch) {
         case "armhfp":
         case "armv7":
             return "armv7";
+        case "riscv64":
+            return "riscv64";
         case "universal":
             return "universal";
         default:

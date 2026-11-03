@@ -1,6 +1,6 @@
 import { z } from "zod";
 export type OS = "linux" | "darwin" | "windows";
-export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "universal";
+export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "riscv64" | "universal";
 export type BundleType = "appimage" | "deb" | "rpm" | "app" | "nsis" | "msi";
 export declare const PlatformInfoSchema: z.ZodObject<{
     url: z.ZodURL;

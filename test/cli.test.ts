@@ -165,6 +165,17 @@ test("refuses to keep entries of an earlier release from latest.json", async () 
   assert.equal((await readLatest(v1.out)).version, "1.0.0");
 });
 
+test("supports riscv64", async () => {
+  const { project, out } = await makeProject("1.0.0", {
+    "riscv64gc-unknown-linux-gnu/release/bundle/deb/App_1.0.0_riscv64.deb": signedFor("App_1.0.0_riscv64.deb", "1.0.0"),
+  });
+  assert.equal((await run(project, out)).code, 0);
+  assert.deepEqual(Object.keys((await readLatest(out)).platforms).sort(), [
+    "linux-riscv64",
+    "linux-riscv64-deb",
+  ]);
+});
+
 test("skips bundles without a signature", async () => {
   const { project, out } = await makeProject("1.0.0", {
     "release/bundle/deb/App_1.0.0_amd64.deb": null,

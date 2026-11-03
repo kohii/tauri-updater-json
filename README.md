@@ -58,8 +58,8 @@ node dist/index.js \
 | OS | Bundle Type | Architectures | Platform Keys |
 |----|-------------|---------------|---------------|
 | Linux | AppImage | x86_64, aarch64, i686, armv7 | `linux-{arch}`, `linux-{arch}-appimage` |
-| Linux | deb | amd64, arm64, i386, armhf | `linux-{arch}`, `linux-{arch}-deb` |
-| Linux | rpm | x86_64, aarch64, i386, armhfp | `linux-{arch}`, `linux-{arch}-rpm` |
+| Linux | deb | amd64, arm64, i386, armhf, riscv64 | `linux-{arch}`, `linux-{arch}-deb` |
+| Linux | rpm | x86_64, aarch64, i386, armhfp, riscv64 | `linux-{arch}`, `linux-{arch}-rpm` |
 | macOS | app | x86_64, aarch64, universal | `darwin-{arch}`, `darwin-{arch}-app` |
 | Windows | NSIS | x64, arm64 | `windows-{arch}`, `windows-{arch}-nsis` |
 | Windows | MSI | x64, arm64 | `windows-{arch}`, `windows-{arch}-msi` |
