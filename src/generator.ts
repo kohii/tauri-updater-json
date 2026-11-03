@@ -41,7 +41,7 @@ export async function generateLatestJson(
   allowOverwritePlatforms?: boolean
 ): Promise<LatestJson> {
   // latest.json describes one release. Entries of another release would
-  // point to builds of another version, which the updater rejects.
+  // point to builds of another version.
   let existing = await loadExistingLatestJson(outputDir);
   if (existing && existing.version !== version) {
     console.warn(

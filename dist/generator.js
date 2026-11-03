@@ -27,7 +27,7 @@ function buildUrl(baseUrl, version, fileName) {
 }
 export async function generateLatestJson(artifacts, version, baseUrl, outputDir, notes, allowOverwritePlatforms) {
     // latest.json describes one release. Entries of another release would
-    // point to builds of another version, which the updater rejects.
+    // point to builds of another version.
     let existing = await loadExistingLatestJson(outputDir);
     if (existing && existing.version !== version) {
         console.warn(`Existing latest.json is for version ${existing.version}, replacing it with one for ${version}`);
