@@ -199,19 +199,20 @@ export async function getSearchDirectories(
 }
 
 // Cargo decides where the build output goes: a workspace root's `target/`,
-// `CARGO_TARGET_DIR`, or `build.target-dir`. Without cargo, assume the default
-// for a standalone src-tauri crate.
+// `CARGO_TARGET_DIR`, or `build.target-dir`. It reads that config from the
+// directory it runs in and its ancestors, so it runs in src-tauri, as the
+// build did. Without cargo, assume the default for a standalone src-tauri crate.
 async function getTargetDir(projectPath: string): Promise<string> {
-  const manifestPath = join(projectPath, "src-tauri", "Cargo.toml");
+  const srcTauri = join(projectPath, "src-tauri");
   try {
     const { stdout } = await promisify(execFile)(
       "cargo",
-      ["metadata", "--no-deps", "--format-version", "1", "--manifest-path", manifestPath],
-      { maxBuffer: 64 * 1024 * 1024 }
+      ["metadata", "--no-deps", "--format-version", "1"],
+      { cwd: srcTauri, maxBuffer: 64 * 1024 * 1024 }
     );
     return JSON.parse(stdout).target_directory;
   } catch {
-    return join(projectPath, "src-tauri", "target");
+    return join(srcTauri, "target");
   }
 }
 
