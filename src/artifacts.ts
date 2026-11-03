@@ -1,5 +1,7 @@
+import { execFile } from "node:child_process";
 import { readdir, readFile, copyFile, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
+import { promisify } from "node:util";
 import type { Artifact, Arch, OS, BundleType } from "./types.js";
 
 interface BundleConfig {
@@ -196,8 +198,25 @@ export async function getSearchDirectories(
   );
 }
 
+// Cargo decides where the build output goes: a workspace root's `target/`,
+// `CARGO_TARGET_DIR`, or `build.target-dir`. Without cargo, assume the default
+// for a standalone src-tauri crate.
+async function getTargetDir(projectPath: string): Promise<string> {
+  const manifestPath = join(projectPath, "src-tauri", "Cargo.toml");
+  try {
+    const { stdout } = await promisify(execFile)(
+      "cargo",
+      ["metadata", "--no-deps", "--format-version", "1", "--manifest-path", manifestPath],
+      { maxBuffer: 64 * 1024 * 1024 }
+    );
+    return JSON.parse(stdout).target_directory;
+  } catch {
+    return join(projectPath, "src-tauri", "target");
+  }
+}
+
 async function getBundleRoots(projectPath: string): Promise<string[]> {
-  const targetDir = join(projectPath, "src-tauri", "target");
+  const targetDir = await getTargetDir(projectPath);
   const roots = new Set<string>([
     join(targetDir, "release", "bundle"),
   ]);

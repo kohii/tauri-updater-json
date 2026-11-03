@@ -43,7 +43,7 @@ node dist/index.js \
 
 - Reads version from `tauri.conf.json` (supports `version` pointing to a `package.json` path)
 - Supports `{version}` placeholder in `--base-url`
-- Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`
+- Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`, in the target directory cargo reports (a Cargo workspace's root `target/`, or `CARGO_TARGET_DIR`)
 - Reads signature content from `.sig` files
 - Appends to existing `latest.json` if present (errors on duplicates by default)
 - Copies distribution files to output directory
