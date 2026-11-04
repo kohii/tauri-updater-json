@@ -1,6 +1,6 @@
 import { z } from "zod";
 export type OS = "linux" | "darwin" | "windows";
-export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "universal";
+export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "riscv64" | "universal";
 export type BundleType = "appimage" | "deb" | "rpm" | "app" | "nsis" | "msi";
 export declare const PlatformInfoSchema: z.ZodObject<{
     url: z.ZodURL;
@@ -29,7 +29,7 @@ export interface Artifact {
     arch: Arch;
     bundle: BundleType;
     bundlePath: string;
-    signaturePath: string;
+    signature: string;
     fileName: string;
 }
 export declare const TauriConfigSchema: z.ZodObject<{

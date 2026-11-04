@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { readTauriConfig } from "./config.js";
 import { findArtifacts, copyArtifactToOutput, getSearchDirectories, } from "./artifacts.js";
 import { generateLatestJson, writeLatestJson } from "./generator.js";
+import { isSignedFor, signedVersion } from "./signature.js";
 program
     .name("tauri-updater-json")
     .description("Generate latest.json for Tauri v2 updater")
@@ -32,24 +33,34 @@ program
         for (const dir of searchDirectories) {
             console.log(`  - ${dir}`);
         }
-        const artifacts = await findArtifacts(options.tauriProject);
+        // A bundle left over from an earlier build (e.g. under another target
+        // triple) is signed for another version, and the updater rejects it.
+        const found = await findArtifacts(options.tauriProject);
+        const artifacts = found.filter((artifact) => {
+            if (isSignedFor(artifact.signature, version))
+                return true;
+            console.warn(`${artifact.fileName} is signed for version ${signedVersion(artifact.signature)}, not ${version}, skipping`);
+            return false;
+        });
         if (artifacts.length === 0) {
-            console.error("No artifacts found. Make sure you have built the Tauri app with updater artifacts enabled.");
+            console.error(found.length > 0
+                ? `No artifacts are signed for version ${version} from tauri.conf.json. Rebuild the app, or make tauri.conf.json have the version the app was built with.`
+                : "No artifacts found. Make sure you have built the Tauri app with updater artifacts enabled.");
             process.exit(1);
         }
         console.log(`Found ${artifacts.length} artifact(s):`);
         for (const artifact of artifacts) {
             console.log(`  - ${artifact.os}-${artifact.arch} (${artifact.bundle}): ${artifact.fileName}`);
         }
-        // Copy artifacts to output directory
+        // Generate latest.json
+        console.log("\nGenerating latest.json...");
+        const latestJson = await generateLatestJson(artifacts, version, options.baseUrl, options.outputDir, options.notes, options.allowOverwritePlatforms);
+        // Copy only once latest.json is known to be valid
         console.log("\nCopying artifacts to output directory...");
         for (const artifact of artifacts) {
             await copyArtifactToOutput(artifact, options.outputDir);
             console.log(`  Copied: ${artifact.fileName}`);
         }
-        // Generate latest.json
-        console.log("\nGenerating latest.json...");
-        const latestJson = await generateLatestJson(artifacts, version, options.baseUrl, options.outputDir, options.notes, options.allowOverwritePlatforms);
         await writeLatestJson(latestJson, options.outputDir);
         console.log("Generated latest.json");
         console.log("\nDone!");

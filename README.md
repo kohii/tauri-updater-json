@@ -9,6 +9,8 @@ pnpm install
 pnpm build
 ```
 
+Run the tests with `pnpm test`.
+
 ## Usage
 
 ```bash
@@ -45,7 +47,8 @@ node dist/index.js \
 - Supports `{version}` placeholder in `--base-url`
 - Auto-detects build artifacts from `target/release/bundle/` and `target/<triple>/release/bundle/`, in the target directory cargo reports (a Cargo workspace's root `target/`, or `CARGO_TARGET_DIR`)
 - Reads signature content from `.sig` files
-- Appends to existing `latest.json` if present (errors on duplicates by default)
+- Skips bundles signed for a version other than the one in `tauri.conf.json`, such as leftovers from an earlier build (tauri-plugin-updater 2.14+ rejects them)
+- Appends to an existing `latest.json` of the same version (errors on duplicates by default), and replaces one of another version
 - Copies distribution files to output directory
 - Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys
 - Supports macOS universal builds (registers for both `x86_64` and `aarch64`, without overwriting native builds)
@@ -55,8 +58,8 @@ node dist/index.js \
 | OS | Bundle Type | Architectures | Platform Keys |
 |----|-------------|---------------|---------------|
 | Linux | AppImage | x86_64, aarch64, i686, armv7 | `linux-{arch}`, `linux-{arch}-appimage` |
-| Linux | deb | amd64, arm64, i386, armhf | `linux-{arch}`, `linux-{arch}-deb` |
-| Linux | rpm | x86_64, aarch64, i386, armhfp | `linux-{arch}`, `linux-{arch}-rpm` |
+| Linux | deb | amd64, arm64, i386, armhf, riscv64 | `linux-{arch}`, `linux-{arch}-deb` |
+| Linux | rpm | x86_64, aarch64, i386, armhfp, riscv64 | `linux-{arch}`, `linux-{arch}-rpm` |
 | macOS | app | x86_64, aarch64, universal | `darwin-{arch}`, `darwin-{arch}-app` |
 | Windows | NSIS | x64, arm64 | `windows-{arch}`, `windows-{arch}-nsis` |
 | Windows | MSI | x64, arm64 | `windows-{arch}`, `windows-{arch}-msi` |

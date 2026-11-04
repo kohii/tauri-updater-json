@@ -34,6 +34,8 @@ function normalizeArch(arch: string): Arch | null {
     case "armhfp":
     case "armv7":
       return "armv7";
+    case "riscv64":
+      return "riscv64";
     case "universal":
       return "universal";
     default:
@@ -155,12 +157,11 @@ export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
       for (const filePath of files) {
         if (seen.has(filePath)) continue;
         seen.add(filePath);
-        const sigPath = `${filePath}.sig`;
         const fileName = basename(filePath);
 
-        // Check if signature file exists
+        let signature: string;
         try {
-          await readFile(sigPath);
+          signature = (await readFile(`${filePath}.sig`, "utf-8")).trim();
         } catch {
           console.warn(`Signature file not found for ${fileName}, skipping`);
           continue;
@@ -179,7 +180,7 @@ export async function findArtifacts(projectPath: string): Promise<Artifact[]> {
           arch,
           bundle: config.bundle,
           bundlePath: filePath,
-          signaturePath: sigPath,
+          signature,
           fileName,
         });
       }
@@ -234,10 +235,6 @@ async function getBundleRoots(projectPath: string): Promise<string[]> {
   }
 
   return Array.from(roots);
-}
-
-export async function readSignature(signaturePath: string): Promise<string> {
-  return readFile(signaturePath, "utf-8");
 }
 
 export async function copyArtifactToOutput(

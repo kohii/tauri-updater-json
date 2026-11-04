@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Artifact, LatestJson, PlatformInfo } from "./types.js";
 import { LatestJsonSchema } from "./types.js";
-import { readSignature, getPlatformKeys } from "./artifacts.js";
+import { getPlatformKeys } from "./artifacts.js";
 
 async function loadExistingLatestJson(
   outputDir: string
@@ -40,15 +40,22 @@ export async function generateLatestJson(
   notes?: string,
   allowOverwritePlatforms?: boolean
 ): Promise<LatestJson> {
-  const existing = await loadExistingLatestJson(outputDir);
+  // latest.json describes one release. Entries of another release would
+  // point to builds of another version.
+  let existing = await loadExistingLatestJson(outputDir);
+  if (existing && existing.version !== version) {
+    console.warn(
+      `Existing latest.json is for version ${existing.version}, replacing it with one for ${version}`
+    );
+    existing = null;
+  }
 
   const platforms: Record<string, PlatformInfo> = existing?.platforms ?? {};
 
   for (const artifact of artifacts) {
-    const signature = await readSignature(artifact.signaturePath);
     const platformInfo: PlatformInfo = {
       url: buildUrl(baseUrl, version, artifact.fileName),
-      signature: signature.trim(),
+      signature: artifact.signature,
     };
 
     // Get all platform keys for this artifact (basic and extended)

@@ -4,7 +4,7 @@ import { z } from "zod";
 export type OS = "linux" | "darwin" | "windows";
 
 // Architecture types (normalized)
-export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "universal";
+export type Arch = "x86_64" | "aarch64" | "i686" | "armv7" | "riscv64" | "universal";
 
 // Bundle types
 export type BundleType = "appimage" | "deb" | "rpm" | "app" | "nsis" | "msi";
@@ -38,7 +38,8 @@ export interface Artifact {
   arch: Arch;
   bundle: BundleType;
   bundlePath: string;
-  signaturePath: string;
+  // Content of the `.sig` file
+  signature: string;
   fileName: string;
 }
 
