@@ -50,7 +50,7 @@ node dist/index.js \
 - Skips bundles signed for a version other than the one in `tauri.conf.json`, such as leftovers from an earlier build (tauri-plugin-updater 2.14+ rejects them)
 - Appends to an existing `latest.json` of the same version (errors on duplicates by default), and replaces one of another version
 - Copies distribution files to output directory
-- Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys
+- Generates both basic (`os-arch`) and extended (`os-arch-bundle`) platform keys (see [Platform Keys](#platform-keys))
 - Supports macOS universal builds (registers for both `x86_64` and `aarch64`, without overwriting native builds)
 
 ## Supported Platforms
@@ -64,7 +64,17 @@ node dist/index.js \
 | Windows | NSIS | x64, arm64 | `windows-{arch}`, `windows-{arch}-nsis` |
 | Windows | MSI | x64, arm64 | `windows-{arch}`, `windows-{arch}-msi` |
 
-**Note:** macOS universal builds automatically register for both `darwin-x86_64` and `darwin-aarch64`.
+### Platform Keys
+
+The updater looks for `{os}-{arch}-{bundle}` first, and falls back to `{os}-{arch}` when it does not know its bundle type (`get_urls` in tauri-plugin-updater). Every bundle gets its `{os}-{arch}-{bundle}` key. When a build has several bundles for the same OS and architecture, `{os}-{arch}` gets one of them, regardless of the order the bundles are found in:
+
+| OS | Preference for `{os}-{arch}` | Why |
+|----|------------------------------|-----|
+| Linux | AppImage, then deb, then rpm | Without a bundle type, the updater installs an AppImage. Neither a deb nor an rpm works there for every user, so deb goes before rpm only to make the choice stable. |
+| Windows | MSI, then NSIS | The same preference as tauri-action. |
+| macOS | native build, then universal | A universal build registers for both `darwin-x86_64` and `darwin-aarch64` (and their `-app` keys), but only for keys that no native build claims and that `latest.json` has no entry for yet. |
+
+Two bundles of the same type for the same platform are an error.
 
 ## Output
 

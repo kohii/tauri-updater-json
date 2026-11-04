@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { LatestJsonSchema } from "./types.js";
-import { getPlatformKeys } from "./artifacts.js";
+import { FALLBACK_PRIORITY, resolvePlatformEntries } from "./platforms.js";
 async function loadExistingLatestJson(outputDir) {
     const latestJsonPath = join(outputDir, "latest.json");
     try {
@@ -34,41 +34,16 @@ export async function generateLatestJson(artifacts, version, baseUrl, outputDir,
         existing = null;
     }
     const platforms = existing?.platforms ?? {};
-    for (const artifact of artifacts) {
-        const platformInfo = {
+    for (const [key, { artifact, priority }] of resolvePlatformEntries(artifacts)) {
+        if (!allowOverwritePlatforms && Object.hasOwn(platforms, key)) {
+            if (priority === FALLBACK_PRIORITY)
+                continue;
+            throw new Error(`Platform entry already exists for key "${key}" (artifact: ${artifact.fileName})`);
+        }
+        platforms[key] = {
             url: buildUrl(baseUrl, version, artifact.fileName),
             signature: artifact.signature,
         };
-        // Get all platform keys for this artifact (basic and extended)
-        const keys = getPlatformKeys(artifact);
-        for (const key of keys) {
-            const isBasicKey = key === `${artifact.os}-${artifact.arch}`;
-            const isWindowsBasic = artifact.os === "windows" && isBasicKey;
-            if (!allowOverwritePlatforms &&
-                Object.prototype.hasOwnProperty.call(platforms, key)) {
-                const isUniversalDarwin = artifact.os === "darwin" && artifact.arch === "universal";
-                const isUniversalKey = key === "darwin-aarch64" ||
-                    key === "darwin-x86_64" ||
-                    key === "darwin-aarch64-app" ||
-                    key === "darwin-x86_64-app";
-                if (isUniversalDarwin && isUniversalKey) {
-                    continue;
-                }
-                if (isWindowsBasic) {
-                    if (artifact.bundle === "msi") {
-                        platforms[key] = platformInfo;
-                        continue;
-                    }
-                    // Prefer MSI for os-arch key; keep existing entry for NSIS.
-                    continue;
-                }
-                throw new Error(`Platform entry already exists for key "${key}" (artifact: ${artifact.fileName})`);
-            }
-            if (allowOverwritePlatforms ||
-                !Object.prototype.hasOwnProperty.call(platforms, key)) {
-                platforms[key] = platformInfo;
-            }
-        }
     }
     const latestJson = {
         version,
