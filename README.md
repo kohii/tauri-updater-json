@@ -4,17 +4,18 @@ CLI tool to generate `latest.json` for [Tauri v2 Updater](https://v2.tauri.app/p
 
 ## Installation
 
+Requires Node.js 22.12.0 or later.
+
 ```bash
-pnpm install
-pnpm build
+npm install -g tauri-updater-json
 ```
 
-Run the tests with `pnpm test`.
+Or run without installing globally: `npx tauri-updater-json --help`.
 
 ## Usage
 
 ```bash
-node dist/index.js \
+tauri-updater-json \
   --tauri-project <path> \
   --output-dir <path> \
   --base-url <url> \
@@ -35,7 +36,7 @@ node dist/index.js \
 ### Example
 
 ```bash
-node dist/index.js \
+tauri-updater-json \
   --tauri-project ./my-tauri-app \
   --output-dir ./releases \
   --base-url https://example.com/releases/{version}/
@@ -94,6 +95,17 @@ Generates a `latest.json` file compatible with Tauri v2 updater:
   }
 }
 ```
+
+## Development
+
+Use Node.js 26 or later to run the TypeScript tests.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm test
+```
+
+Run the CLI from source with `pnpm build` followed by `node dist/index.js`.
 
 ## License
 
