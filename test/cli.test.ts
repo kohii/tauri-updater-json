@@ -105,6 +105,105 @@ test("generates basic and bundle keys for every platform", async () => {
   ]);
 });
 
+function entryFor(file: string) {
+  return { url: `https://example.com/1.0.0/${file}`, signature: signedFor(file, "1.0.0") };
+}
+
+// The order artifacts are found in: `release/bundle` comes before
+// `<triple>/release/bundle`, and within a bundle root the bundle types come
+// in a fixed order. Each case below puts the preferred bundle last as well.
+for (const appImageRoot of ["release", "x86_64-unknown-linux-gnu/release"]) {
+  test(`prefers the AppImage for the os-arch key on Linux (AppImage in ${appImageRoot})`, async () => {
+    const { project, out } = await makeProject("1.0.0", {
+      [`${appImageRoot}/bundle/appimage/App_1.0.0_amd64.AppImage`]: signedFor("App_1.0.0_amd64.AppImage", "1.0.0"),
+      "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
+      "release/bundle/rpm/App-1.0.0-1.x86_64.rpm": signedFor("App-1.0.0-1.x86_64.rpm", "1.0.0"),
+    });
+    const result = await run(project, out);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual((await readLatest(out)).platforms, {
+      "linux-x86_64": entryFor("App_1.0.0_amd64.AppImage"),
+      "linux-x86_64-appimage": entryFor("App_1.0.0_amd64.AppImage"),
+      "linux-x86_64-deb": entryFor("App_1.0.0_amd64.deb"),
+      "linux-x86_64-rpm": entryFor("App-1.0.0-1.x86_64.rpm"),
+    });
+  });
+}
+
+test("prefers the deb over the rpm for the os-arch key on Linux", async () => {
+  const { project, out } = await makeProject("1.0.0", {
+    "x86_64-unknown-linux-gnu/release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
+    "release/bundle/rpm/App-1.0.0-1.x86_64.rpm": signedFor("App-1.0.0-1.x86_64.rpm", "1.0.0"),
+  });
+  const result = await run(project, out);
+  assert.equal(result.code, 0, result.stderr);
+  const latest = await readLatest(out);
+  assert.deepEqual(latest.platforms["linux-x86_64"], entryFor("App_1.0.0_amd64.deb"));
+  assert.deepEqual(latest.platforms["linux-x86_64-rpm"], entryFor("App-1.0.0-1.x86_64.rpm"));
+});
+
+for (const [msiRoot, nsisRoot] of [
+  ["release", "x86_64-pc-windows-msvc/release"],
+  ["x86_64-pc-windows-msvc/release", "release"],
+]) {
+  test(`prefers the MSI for the os-arch key on Windows (MSI in ${msiRoot}, NSIS in ${nsisRoot})`, async () => {
+    const { project, out } = await makeProject("1.0.0", {
+      [`${msiRoot}/bundle/msi/App_1.0.0_x64_en-US.msi`]: signedFor("App_1.0.0_x64_en-US.msi", "1.0.0"),
+      [`${nsisRoot}/bundle/nsis/App_1.0.0_x64-setup.exe`]: signedFor("App_1.0.0_x64-setup.exe", "1.0.0"),
+    });
+    const result = await run(project, out);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual((await readLatest(out)).platforms, {
+      "windows-x86_64": entryFor("App_1.0.0_x64_en-US.msi"),
+      "windows-x86_64-msi": entryFor("App_1.0.0_x64_en-US.msi"),
+      "windows-x86_64-nsis": entryFor("App_1.0.0_x64-setup.exe"),
+    });
+  });
+}
+
+test("a universal macOS build does not replace a native one found before or after it", async () => {
+  const { project, out } = await makeProject("1.0.0", {
+    "release/bundle/macos/App_universal.app.tar.gz": signedFor("App_universal.app.tar.gz", "1.0.0"),
+    "aarch64-apple-darwin/release/bundle/macos/App.app.tar.gz": signedFor("App.app.tar.gz", "1.0.0"),
+  });
+  const result = await run(project, out);
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual((await readLatest(out)).platforms, {
+    "darwin-aarch64": entryFor("App.app.tar.gz"),
+    "darwin-aarch64-app": entryFor("App.app.tar.gz"),
+    "darwin-x86_64": entryFor("App_universal.app.tar.gz"),
+    "darwin-x86_64-app": entryFor("App_universal.app.tar.gz"),
+  });
+});
+
+test("a universal macOS build added to latest.json keeps the native entries", async () => {
+  const native = await makeProject("1.0.0", {
+    "aarch64-apple-darwin/release/bundle/macos/App.app.tar.gz": signedFor("App.app.tar.gz", "1.0.0"),
+  });
+  const universal = await makeProject("1.0.0", {
+    "universal-apple-darwin/release/bundle/macos/App_universal.app.tar.gz": signedFor("App_universal.app.tar.gz", "1.0.0"),
+  });
+  assert.equal((await run(native.project, native.out)).code, 0);
+  const result = await run(universal.project, native.out);
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual((await readLatest(native.out)).platforms, {
+    "darwin-aarch64": entryFor("App.app.tar.gz"),
+    "darwin-aarch64-app": entryFor("App.app.tar.gz"),
+    "darwin-x86_64": entryFor("App_universal.app.tar.gz"),
+    "darwin-x86_64-app": entryFor("App_universal.app.tar.gz"),
+  });
+});
+
+test("refuses two bundles of the same type for the same platform", async () => {
+  const { project, out } = await makeProject("1.0.0", {
+    "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
+    "x86_64-unknown-linux-gnu/release/bundle/deb/Other_1.0.0_amd64.deb": signedFor("Other_1.0.0_amd64.deb", "1.0.0"),
+  });
+  const result = await run(project, out);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /App_1.0.0_amd64.deb and Other_1.0.0_amd64.deb both/);
+});
+
 test("adds to an existing latest.json and refuses duplicate keys", async () => {
   const linux = await makeProject("1.0.0", {
     "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),

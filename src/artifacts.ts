@@ -245,25 +245,3 @@ export async function copyArtifactToOutput(
   const destPath = join(outputDir, artifact.fileName);
   await copyFile(artifact.bundlePath, destPath);
 }
-
-// Generate platform keys for an artifact
-// Returns both basic key (os-arch) and extended key (os-arch-bundle)
-export function getPlatformKeys(artifact: Artifact): string[] {
-  const keys: string[] = [];
-  const { os, arch, bundle } = artifact;
-
-  if (arch === "universal" && os === "darwin") {
-    // Universal macOS builds register for both architectures
-    keys.push("darwin-x86_64");
-    keys.push("darwin-aarch64");
-    keys.push("darwin-x86_64-app");
-    keys.push("darwin-aarch64-app");
-  } else {
-    // Basic key: os-arch
-    keys.push(`${os}-${arch}`);
-    // Extended key: os-arch-bundle
-    keys.push(`${os}-${arch}-${bundle}`);
-  }
-
-  return keys;
-}
