@@ -176,6 +176,24 @@ test("a universal macOS build does not replace a native one found before or afte
   });
 });
 
+test("a universal macOS build added to latest.json keeps the native entries", async () => {
+  const native = await makeProject("1.0.0", {
+    "aarch64-apple-darwin/release/bundle/macos/App.app.tar.gz": signedFor("App.app.tar.gz", "1.0.0"),
+  });
+  const universal = await makeProject("1.0.0", {
+    "universal-apple-darwin/release/bundle/macos/App_universal.app.tar.gz": signedFor("App_universal.app.tar.gz", "1.0.0"),
+  });
+  assert.equal((await run(native.project, native.out)).code, 0);
+  const result = await run(universal.project, native.out);
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual((await readLatest(native.out)).platforms, {
+    "darwin-aarch64": entryFor("App.app.tar.gz"),
+    "darwin-aarch64-app": entryFor("App.app.tar.gz"),
+    "darwin-x86_64": entryFor("App_universal.app.tar.gz"),
+    "darwin-x86_64-app": entryFor("App_universal.app.tar.gz"),
+  });
+});
+
 test("refuses two bundles of the same type for the same platform", async () => {
   const { project, out } = await makeProject("1.0.0", {
     "release/bundle/deb/App_1.0.0_amd64.deb": signedFor("App_1.0.0_amd64.deb", "1.0.0"),
